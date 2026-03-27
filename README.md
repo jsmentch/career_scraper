@@ -33,6 +33,23 @@ python -m career_scraper apple --list-locations "Germany"
 python -m career_scraper apple --format csv --out apple_us.csv
 ```
 
+### Output path convention
+
+Use this folder format for raw pulls:
+
+`data/raw/apple/YYYY-MM-DD/apple_us_all.jsonl`
+
+Example command:
+
+```bash
+run_date="$(date +%F)"
+out_dir="data/raw/apple/${run_date}"
+mkdir -p "${out_dir}"
+python -m career_scraper apple \
+  --location-id united-states-USA \
+  --out "${out_dir}/apple_us_all.jsonl"
+```
+
 ### Apple note
 
 Apple does not document a stable public API for bulk job export. Job listings are read from the **same HTML search pages** your browser loads (`/{locale}/search?...`), by parsing the embedded `__staticRouterHydrationData` payload. Location hints use `GET /api/v1/refData/postlocation` when you pass `--location-query` or `--list-locations`. Those mechanisms **may change** at any time. Use modest request pacing (`--page-delay`); comply with [Apple’s site terms](https://www.apple.com/legal/internet-services/terms/site.html) and applicable law.
