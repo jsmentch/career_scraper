@@ -52,6 +52,7 @@ def _make_transport() -> httpx.MockTransport:
 
 def test_fetch_stops_on_empty_page() -> None:
     transport = _make_transport()
+    lines: list[str] = []
     with httpx.Client(transport=transport, base_url="https://jobs.apple.com") as client:
         jobs = fetch_jobs_for_locations(
             client,
@@ -61,9 +62,12 @@ def test_fetch_stops_on_empty_page() -> None:
             page_delay_sec=0,
             max_pages=None,
             include_raw=False,
+            progress=lines.append,
         )
     assert len(jobs) == 1
     assert jobs[0].external_id == "PIPE-114438206"
+    assert any("starting fetch" in line for line in lines)
+    assert any("page 1" in line for line in lines)
 
 
 def test_postlocation_id_maps_to_slug() -> None:

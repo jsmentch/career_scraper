@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -218,6 +218,7 @@ def fetch_jobs_for_locations(
     page_delay_sec: float = 0.35,
     max_pages: Optional[int] = None,
     include_raw: bool = True,
+    progress: Optional[Callable[[str], None]] = None,
 ) -> List[Job]:
     """
     Fetch jobs by walking the public search HTML (SSR hydration), paginated with ?page=.
@@ -242,6 +243,12 @@ def fetch_jobs_for_locations(
         total_records: Optional[int] = None
         page_size_hint: Optional[int] = None
         pages_needed: Optional[int] = None
+
+        if progress is not None:
+            progress(
+                f"Location {slug!r} — starting fetch"
+                + (f" (search query: {query!r})" if query.strip() else "")
+            )
 
         while True:
             if page > _MAX_SEARCH_PAGES:
@@ -299,7 +306,27 @@ def fetch_jobs_for_locations(
                     collected.setdefault(key, item)
 
             if len(collected) == before:
+                if progress is not None:
+                    progress(
+                        f"Location {slug!r} — page {page}: no new job ids "
+                        f"(batch size {len(batch)}); stopping."
+                    )
                 break
+
+            if progress is not None:
+                added = len(collected) - before
+                parts = [
+                    f"page {page}",
+                    f"+{added} new",
+                    f"{len(collected)} unique",
+                ]
+                if total_records is not None:
+                    parts.append(f"site_total≈{total_records}")
+                if pages_needed is not None and max_pages is None:
+                    parts.append(f"~{pages_needed} pages")
+                if max_pages is not None:
+                    parts.append(f"max_pages={max_pages}")
+                progress(f"Location {slug!r} — " + ", ".join(parts))
 
             if (
                 pages_needed is not None

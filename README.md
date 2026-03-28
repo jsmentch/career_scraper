@@ -14,8 +14,14 @@ pip install -e ".[dev]"
 ## Usage
 
 ```bash
-# All active roles in the United States (default location filter)
-python -m career_scraper apple --out apple_us.jsonl
+career-scraper --version
+
+# All active US roles: default output path is
+#   data/raw/apple/YYYY-MM-DD/apple_united-states-USA_all.jsonl
+python -m career_scraper apple
+
+# Progress on stderr (page, new ids, totals)
+python -m career_scraper apple -v --max-pages 3
 
 # Keyword search + location (repeatable). Use either URL slugs or legacy postLocation ids:
 python -m career_scraper apple --query "machine learning" \
@@ -31,15 +37,20 @@ python -m career_scraper apple --list-locations "Germany"
 
 # CSV instead of JSONL
 python -m career_scraper apple --format csv --out apple_us.csv
+
+# Errors only (no “Wrote N jobs …” summary)
+python -m career_scraper apple -q -o apple_us.jsonl
 ```
 
 ### Output path convention
 
-Use this folder format for raw pulls:
+If you omit `--out` / `-o`, files go under:
 
-`data/raw/apple/YYYY-MM-DD/apple_us_all.jsonl`
+`data/raw/apple/YYYY-MM-DD/apple_<first-location-slug>_all.jsonl`
 
-Example command:
+(with `.csv` when using `--format csv`; multiple `--location-id` uses `apple_multi_all.*`).
+
+Example explicit path (same folder layout):
 
 ```bash
 run_date="$(date +%F)"
