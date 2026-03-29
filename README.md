@@ -65,6 +65,10 @@ python -m career_scraper apple \
 
 Apple does not document a stable public API for bulk job export. Job listings are read from the **same HTML search pages** your browser loads (`/{locale}/search?...`), by parsing the embedded `__staticRouterHydrationData` payload. Location hints use `GET /api/v1/refData/postlocation` when you pass `--location-query` or `--list-locations`. Those mechanisms **may change** at any time. Use modest request pacing (`--page-delay`); comply with [Apple’s site terms](https://www.apple.com/legal/internet-services/terms/site.html) and applicable law.
 
+### Meta / metacareers (out of scope)
+
+This project does **not** include scraping or automation for [Meta Careers](https://www.metacareers.com/) (`metacareers.com`). That site relies on internal GraphQL and similar mechanisms, and its `robots.txt` restricts automated collection without express permission. Adding Meta support would be fragile and legally sensitive, so it is intentionally not implemented here.
+
 ## Development
 
 ```bash
