@@ -1,6 +1,6 @@
 # career-scraper
 
-Python CLI to download job postings from employer career sites in **JSONL** or **CSV** for local filtering and parsing. The first supported source is **Apple** (`jobs.apple.com`).
+Python CLI to download job postings from employer career sites in **JSONL** or **CSV** for local filtering and parsing. Supported sources include **Apple** (`jobs.apple.com`) and **Amazon** (`amazon.jobs`).
 
 ## Install
 
@@ -40,6 +40,12 @@ python -m career_scraper apple --format csv --out apple_us.csv
 
 # Errors only (no “Wrote N jobs …” summary)
 python -m career_scraper apple -q -o apple_us.jsonl
+
+# Amazon (uses the site’s search.json endpoint — fast JSON, not HTML)
+python -m career_scraper amazon --loc-query "United States" -v --max-pages 2
+
+# Full Amazon pull for a location (default out: data/raw/amazon/YYYY-MM-DD/…)
+python -m career_scraper amazon --loc-query "United States" --query "software engineer"
 ```
 
 ### Output path convention
@@ -61,9 +67,17 @@ python -m career_scraper apple \
   --out "${out_dir}/apple_us_all.jsonl"
 ```
 
+Amazon defaults look like:
+
+`data/raw/amazon/YYYY-MM-DD/amazon_<loc-query-or-query-or-all>_all.jsonl`
+
 ### Apple note
 
 Apple does not document a stable public API for bulk job export. Job listings are read from the **same HTML search pages** your browser loads (`/{locale}/search?...`), by parsing the embedded `__staticRouterHydrationData` payload. Location hints use `GET /api/v1/refData/postlocation` when you pass `--location-query` or `--list-locations`. Those mechanisms **may change** at any time. Use modest request pacing (`--page-delay`); comply with [Apple’s site terms](https://www.apple.com/legal/internet-services/terms/site.html) and applicable law.
+
+### Amazon note
+
+The CLI calls `https://www.amazon.jobs/{locale}/search.json` with the same query parameters the web UI uses (`base_query`, `loc_query`, `offset`, `result_limit`, etc.). That endpoint is **not documented as a public API** for third parties, may change or rate-limit at any time, and is subject to [Amazon’s site terms](https://www.amazon.com/gp/help/customer/display.html?nodeId=508088). Use `--page-delay` and modest `result_limit` values; respect robots and applicable law.
 
 ### Meta / metacareers (out of scope)
 

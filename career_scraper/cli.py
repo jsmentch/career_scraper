@@ -9,6 +9,13 @@ from typing import List, Optional
 
 from career_scraper import __version__
 from career_scraper.export import write_csv, write_jsonl
+from career_scraper.sources.amazon import (
+    AmazonAPIError,
+    amazon_client,
+)
+from career_scraper.sources.amazon import (
+    fetch_jobs as amazon_fetch_jobs,
+)
 from career_scraper.sources.apple import (
     AppleAPIError,
     apple_client,
@@ -16,6 +23,18 @@ from career_scraper.sources.apple import (
     fetch_postlocation_matches,
     resolve_location_slug,
 )
+
+
+def _default_amazon_out_path(*, loc_query: str, base_query: str, fmt: str) -> Path:
+    run_date = date.today().isoformat()
+    if loc_query.strip():
+        part = re.sub(r"[^a-zA-Z0-9_.-]+", "_", loc_query.strip())[:80]
+    elif base_query.strip():
+        part = re.sub(r"[^a-zA-Z0-9_.-]+", "_", base_query.strip())[:80]
+    else:
+        part = "all"
+    ext = "csv" if fmt == "csv" else "jsonl"
+    return Path(f"data/raw/amazon/{run_date}/amazon_{part}_all.{ext}")
 
 
 def _default_apple_out_path(location_ids: list[str], *, fmt: str) -> Path:
@@ -83,6 +102,49 @@ def _cmd_apple(args: argparse.Namespace) -> int:
             )
         except AppleAPIError as e:
             print(f"Apple API error: {e}", file=sys.stderr)
+            return 1
+
+    if args.format == "csv":
+        write_csv(jobs, out_path)
+    else:
+        write_jsonl(jobs, out_path, include_raw=not args.no_raw)
+
+    if not args.quiet:
+        print(f"Wrote {len(jobs)} jobs to {out_path}", file=sys.stderr)
+    return 0
+
+
+def _cmd_amazon(args: argparse.Namespace) -> int:
+    out_path = (
+        Path(args.out)
+        if args.out
+        else _default_amazon_out_path(
+            loc_query=args.loc_query,
+            base_query=args.query,
+            fmt=args.format,
+        )
+    )
+    if args.verbose and not args.quiet:
+        print(f"Output path: {out_path}", file=sys.stderr)
+
+    progress_cb = (lambda m: print(m, file=sys.stderr)) if args.verbose else None
+
+    with amazon_client(timeout=args.timeout) as client:
+        try:
+            jobs = amazon_fetch_jobs(
+                client,
+                base_query=args.query,
+                loc_query=args.loc_query,
+                locale_prefix=args.locale,
+                result_limit=args.result_limit,
+                sort=args.sort,
+                page_delay_sec=args.page_delay,
+                max_pages=args.max_pages,
+                include_raw=not args.no_raw,
+                progress=progress_cb,
+            )
+        except AmazonAPIError as e:
+            print(f"Amazon jobs error: {e}", file=sys.stderr)
             return 1
 
     if args.format == "csv":
@@ -194,6 +256,91 @@ def _build_parser() -> argparse.ArgumentParser:
         help="HTTP timeout in seconds (default: 30).",
     )
     apple.set_defaults(func=_cmd_apple)
+
+    amazon = sub.add_parser("amazon", help="Fetch listings from amazon.jobs (search.json)")
+    amazon.add_argument(
+        "--query",
+        default="",
+        metavar="TEXT",
+        help="Keyword / base_query filter (default: empty).",
+    )
+    amazon.add_argument(
+        "--loc-query",
+        default="",
+        metavar="TEXT",
+        help='Location filter passed as loc_query (default: empty for unscoped search).',
+    )
+    amazon.add_argument(
+        "--locale",
+        default="en",
+        help='Locale path prefix for search.json (default: en → /en/search.json).',
+    )
+    amazon.add_argument(
+        "--sort",
+        default="recent",
+        help="Sort order (default: recent).",
+    )
+    amazon.add_argument(
+        "--result-limit",
+        type=int,
+        default=100,
+        metavar="N",
+        help="Jobs per request, max 100 (default: 100).",
+    )
+    amazon.add_argument(
+        "--out",
+        "-o",
+        metavar="PATH",
+        help=(
+            "Output file path. If omitted, writes under data/raw/amazon/YYYY-MM-DD/ "
+            "from loc_query, query, or 'all' (see README)."
+        ),
+    )
+    amazon.add_argument(
+        "--format",
+        choices=("jsonl", "csv"),
+        default="jsonl",
+        help="Output format (default: jsonl).",
+    )
+    log_a = amazon.add_mutually_exclusive_group()
+    log_a.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print progress messages to stderr while fetching.",
+    )
+    log_a.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Only print errors (no summary line).",
+    )
+    amazon.add_argument(
+        "--page-delay",
+        type=float,
+        default=0.25,
+        metavar="SEC",
+        help="Delay between paginated requests (default: 0.25).",
+    )
+    amazon.add_argument(
+        "--max-pages",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Stop after N pages (for testing).",
+    )
+    amazon.add_argument(
+        "--no-raw",
+        action="store_true",
+        help="Omit raw API payload from JSONL output.",
+    )
+    amazon.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="HTTP timeout in seconds (default: 30).",
+    )
+    amazon.set_defaults(func=_cmd_amazon)
     return p
 
 

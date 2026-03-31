@@ -1,0 +1,18 @@
+{
+  "error": null,
+  "hits": 2,
+  "jobs": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "title": "Software Engineer",
+      "company_name": "Amazon.com Services LLC",
+      "job_path": "/en/jobs/100/software-engineer",
+      "location": "US, WA, Seattle",
+      "city": "Seattle",
+      "country_code": "USA",
+      "posted_date": "March 28, 2026",
+      "description_short": "Build things.",
+      "job_family": "Software Development"
+    }
+  ]
+}
