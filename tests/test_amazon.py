@@ -12,6 +12,28 @@ from rolefetch.sources.amazon import AmazonAPIError, fetch_jobs, normalize_amazo
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
+def test_normalize_amazon_job_short_summary_only_ignores_long_description() -> None:
+    long_html = "<p>" + ("x" * 5000) + "</p>"
+    record = {
+        "id": "z",
+        "title": "Engineer",
+        "company_name": "Amazon",
+        "job_path": "/en/jobs/9/z",
+        "location": "Seattle, WA",
+        "description_short": "Teaser only.",
+        "description": long_html,
+    }
+    full = normalize_amazon_job(record, include_raw=False, short_summary_only=False)
+    assert full.summary == "Teaser only."
+
+    record_no_short = {k: v for k, v in record.items() if k != "description_short"}
+    full_long = normalize_amazon_job(record_no_short, include_raw=False, short_summary_only=False)
+    assert full_long.summary is not None and len(full_long.summary) > 1000
+
+    short = normalize_amazon_job(record_no_short, include_raw=False, short_summary_only=True)
+    assert short.summary is None
+
+
 def test_normalize_amazon_job() -> None:
     record = json.loads((FIXTURES / "amazon_search_page.json").read_text(encoding="utf-8"))[
         "jobs"

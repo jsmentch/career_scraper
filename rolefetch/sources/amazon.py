@@ -33,7 +33,12 @@ def search_json_url(locale_prefix: str) -> str:
     return f"https://www.amazon.jobs/{loc}/search.json"
 
 
-def normalize_amazon_job(record: Dict[str, Any], *, include_raw: bool) -> Job:
+def normalize_amazon_job(
+    record: Dict[str, Any],
+    *,
+    include_raw: bool,
+    short_summary_only: bool = False,
+) -> Job:
     external_id = str(record.get("id") or record.get("job_path") or "")
     path = (record.get("job_path") or "").strip()
     if path.startswith("/"):
@@ -46,7 +51,11 @@ def normalize_amazon_job(record: Dict[str, Any], *, include_raw: bool) -> Job:
     title = str(record.get("title") or "").strip() or "(no title)"
     company = str(record.get("company_name") or "Amazon").strip()
 
-    summary = record.get("description_short") or record.get("description")
+    short_desc = record.get("description_short")
+    if short_summary_only:
+        summary = short_desc
+    else:
+        summary = short_desc or record.get("description")
     summary_str = str(summary).strip() if summary else None
 
     locs: List[str] = []
@@ -102,6 +111,7 @@ def fetch_jobs(
     page_delay_sec: float = 0.25,
     max_pages: Optional[int] = None,
     include_raw: bool = True,
+    short_summary_only: bool = False,
     progress: Optional[Callable[[str], None]] = None,
 ) -> List[Job]:
     """
@@ -198,7 +208,11 @@ def fetch_jobs(
         time.sleep(page_delay_sec)
 
     return [
-        normalize_amazon_job(rec, include_raw=include_raw)
+        normalize_amazon_job(
+            rec,
+            include_raw=include_raw,
+            short_summary_only=short_summary_only,
+        )
         for rec in collected_by_id.values()
     ]
 

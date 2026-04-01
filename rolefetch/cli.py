@@ -148,6 +148,9 @@ def _cmd_amazon(args: argparse.Namespace) -> int:
 
     progress_cb = (lambda m: print(m, file=sys.stderr)) if args.verbose else None
 
+    compact = args.compact
+    include_raw = not args.no_raw and not compact
+
     with amazon_client(timeout=args.timeout) as client:
         try:
             jobs = amazon_fetch_jobs(
@@ -159,7 +162,8 @@ def _cmd_amazon(args: argparse.Namespace) -> int:
                 sort=args.sort,
                 page_delay_sec=args.page_delay,
                 max_pages=args.max_pages,
-                include_raw=not args.no_raw,
+                include_raw=include_raw,
+                short_summary_only=compact,
                 progress=progress_cb,
             )
         except AmazonAPIError as e:
@@ -169,7 +173,7 @@ def _cmd_amazon(args: argparse.Namespace) -> int:
     if args.format == "csv":
         write_csv(jobs, out_path)
     else:
-        write_jsonl(jobs, out_path, include_raw=not args.no_raw)
+        write_jsonl(jobs, out_path, include_raw=include_raw)
 
     if not args.quiet:
         print(f"Wrote {len(jobs)} jobs to {out_path}", file=sys.stderr)
@@ -392,6 +396,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-raw",
         action="store_true",
         help="Omit raw API payload from JSONL output.",
+    )
+    amazon.add_argument(
+        "--compact",
+        action="store_true",
+        help=(
+            "Smaller JSONL for tools like ChatGPT: omit raw payload and use only the short "
+            "teaser for summary (not full posting HTML). Implies the same as --no-raw."
+        ),
     )
     amazon.add_argument(
         "--timeout",

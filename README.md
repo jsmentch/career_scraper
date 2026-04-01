@@ -47,6 +47,12 @@ python -m rolefetch amazon --loc-query "United States" -v --max-pages 2
 # Full Amazon pull for a location (default out: data/raw/amazon/YYYY-MM-DD/…)
 python -m rolefetch amazon --loc-query "United States" --query "software engineer"
 
+# Smaller file for LLM uploads: no duplicate raw blob, short teaser only (not full HTML JD)
+python -m rolefetch amazon --loc-query "United States" --compact -o amazon_us_compact.jsonl
+
+# Drop only the raw payload but keep full posting text in summary (often still large)
+python -m rolefetch amazon --loc-query "United States" --no-raw -o amazon_us.jsonl
+
 # Google Careers (parses large HTML results pages; use --max-pages while testing)
 python -m rolefetch google --location "United States" -v --max-pages 2
 
@@ -87,6 +93,8 @@ Apple does not document a stable public API for bulk job export. Job listings ar
 ### Amazon note
 
 The CLI calls `https://www.amazon.jobs/{locale}/search.json` with the same query parameters the web UI uses (`base_query`, `loc_query`, `offset`, `result_limit`, etc.). That endpoint is **not documented as a public API** for third parties, may change or rate-limit at any time, and is subject to [Amazon’s site terms](https://www.amazon.com/gp/help/customer/display.html?nodeId=508088). Use `--page-delay` and modest `result_limit` values; respect robots and applicable law.
+
+By default each JSONL line includes a `raw` field with the full search payload for that job (duplicating title, locations, and often a long HTML `description`), which makes files huge. Use **`--no-raw`** to drop that copy, or **`--compact`** to drop `raw` and keep only Amazon’s short teaser in `summary` instead of the full posting HTML.
 
 ### Google note
 
