@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -33,6 +34,80 @@ def search_json_url(locale_prefix: str) -> str:
     return f"https://www.amazon.jobs/{loc}/search.json"
 
 
+def _humanize_amazon_label(label: str) -> str:
+    """Turn slug-like team labels into plain words (hyphens/spaces)."""
+    return label.replace("-", " ").replace("_", " ").strip()
+
+
+def _amazon_team_str(value: Any) -> Optional[str]:
+    """Pick a short team / job-family string; avoid dumping full API dicts."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        t = value.strip()
+        return t or None
+    if isinstance(value, dict):
+        for key in ("title", "headline", "name"):
+            v = value.get(key)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        lab = value.get("label")
+        if isinstance(lab, str) and lab.strip():
+            return _humanize_amazon_label(lab.strip())
+        return None
+    t = str(value).strip()
+    return t or None
+
+
+def _amazon_location_line(item: Any) -> Optional[str]:
+    """One human-readable location line (drops embedded JSON metadata blobs)."""
+    if item is None:
+        return None
+    if isinstance(item, dict):
+        for key in ("display_name", "location", "normalizedLocation", "locationNonStemming"):
+            v = item.get(key)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return None
+    if isinstance(item, str):
+        s = item.strip()
+        if not s:
+            return None
+        if s.startswith("{") and s.endswith("}"):
+            try:
+                obj = json.loads(s)
+            except json.JSONDecodeError:
+                return None
+            if isinstance(obj, dict):
+                for key in ("location", "normalizedLocation", "locationNonStemming", "display_name"):
+                    v = obj.get(key)
+                    if isinstance(v, str) and v.strip():
+                        return v.strip()
+            return None
+        return s
+    return str(item).strip() or None
+
+
+def _amazon_locations_list(record: Dict[str, Any]) -> List[str]:
+    lines: List[str] = []
+    top = _amazon_location_line(record.get("location"))
+    if top:
+        lines.append(top)
+    multi = record.get("locations")
+    if isinstance(multi, list):
+        for item in multi:
+            line = _amazon_location_line(item)
+            if line:
+                lines.append(line)
+    deduped: List[str] = []
+    seen: set[str] = set()
+    for x in lines:
+        if x not in seen:
+            seen.add(x)
+            deduped.append(x)
+    return deduped
+
+
 def normalize_amazon_job(
     record: Dict[str, Any],
     *,
@@ -58,32 +133,14 @@ def normalize_amazon_job(
         summary = short_desc or record.get("description")
     summary_str = str(summary).strip() if summary else None
 
-    locs: List[str] = []
-    loc = record.get("location")
-    if loc:
-        locs.append(str(loc).strip())
-    multi = record.get("locations")
-    if isinstance(multi, list):
-        for item in multi:
-            if isinstance(item, dict):
-                blob = item.get("display_name") or item.get("location")
-                if blob:
-                    locs.append(str(blob).strip())
-            elif item:
-                locs.append(str(item).strip())
-    deduped: List[str] = []
-    seen_loc: set[str] = set()
-    for x in locs:
-        if x and x not in seen_loc:
-            seen_loc.add(x)
-            deduped.append(x)
-    locs = deduped
+    locs = _amazon_locations_list(record)
 
     posted = record.get("posted_date")
     posted_str = str(posted).strip() if posted else None
 
-    team = record.get("team") or record.get("job_family")
-    team_str = str(team).strip() if team else None
+    team_str = _amazon_team_str(record.get("team")) or _amazon_team_str(
+        record.get("job_family")
+    )
 
     raw = dict(record) if include_raw else None
     return Job(

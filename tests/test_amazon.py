@@ -34,6 +34,32 @@ def test_normalize_amazon_job_short_summary_only_ignores_long_description() -> N
     assert short.summary is None
 
 
+def test_normalize_amazon_job_team_dict_and_location_json_blob() -> None:
+    loc_blob = json.dumps(
+        {
+            "location": "US, TX, Houston",
+            "buildingCodeList": ["WFM10645", "ZHS4"],
+            "coordinates": "29.76078,-95.36952",
+        }
+    )
+    record = {
+        "id": "j1",
+        "title": "Maintenance Manager",
+        "company_name": "Amazon.com Services LLC - A57",
+        "job_path": "/en/jobs/10381438/maintenance-manager",
+        "location": "US, TX, Houston",
+        "locations": [loc_blob],
+        "team": {
+            "id": None,
+            "label": "team-reliability-maintenance-engineering",
+            "title": None,
+        },
+    }
+    job = normalize_amazon_job(record, include_raw=False)
+    assert job.team == "team reliability maintenance engineering"
+    assert job.locations == ["US, TX, Houston"]
+
+
 def test_normalize_amazon_job() -> None:
     record = json.loads((FIXTURES / "amazon_search_page.json").read_text(encoding="utf-8"))[
         "jobs"
