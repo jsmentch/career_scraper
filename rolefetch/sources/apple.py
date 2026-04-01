@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 import httpx
 import pycountry
 
-from career_scraper.models import Job
+from rolefetch.models import Job
 
 POSTLOCATION_URL = "https://jobs.apple.com/api/v1/refData/postlocation"
 

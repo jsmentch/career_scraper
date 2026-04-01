@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-from career_scraper.sources.amazon import AmazonAPIError, fetch_jobs, normalize_amazon_job
+from rolefetch.sources.amazon import AmazonAPIError, fetch_jobs, normalize_amazon_job
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 

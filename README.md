@@ -1,11 +1,11 @@
-# career-scraper
+# rolefetch
 
 Python CLI to download job postings from employer career sites in **JSONL** or **CSV** for local filtering and parsing. Supported sources include **Apple** (`jobs.apple.com`), **Amazon** (`amazon.jobs`), and **Google** (`google.com/about/careers`).
 
 ## Install
 
 ```bash
-cd /Users/jeff/Documents/career_scraper
+cd rolefetch  # repository root
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -14,43 +14,43 @@ pip install -e ".[dev]"
 ## Usage
 
 ```bash
-career-scraper --version
+rolefetch --version
 
 # All active US roles: default output path is
 #   data/raw/apple/YYYY-MM-DD/apple_united-states-USA_all.jsonl
-python -m career_scraper apple
+python -m rolefetch apple
 
 # Progress on stderr (page, new ids, totals)
-python -m career_scraper apple -v --max-pages 3
+python -m rolefetch apple -v --max-pages 3
 
 # Keyword search + location (repeatable). Use either URL slugs or legacy postLocation ids:
-python -m career_scraper apple --query "machine learning" \
+python -m rolefetch apple --query "machine learning" \
   --location-id united-states-USA \
   --out apple_ml.jsonl
 # (still accepts e.g. --location-id postLocation-USA — mapped via ISO country codes)
 
 # Resolve location IDs from a free-text query (uses Apple's refdata API; picks first match)
-python -m career_scraper apple --location-query "United States" --out apple_us.jsonl
+python -m rolefetch apple --location-query "United States" --out apple_us.jsonl
 
 # List candidate location IDs for a string
-python -m career_scraper apple --list-locations "Germany"
+python -m rolefetch apple --list-locations "Germany"
 
 # CSV instead of JSONL
-python -m career_scraper apple --format csv --out apple_us.csv
+python -m rolefetch apple --format csv --out apple_us.csv
 
 # Errors only (no “Wrote N jobs …” summary)
-python -m career_scraper apple -q -o apple_us.jsonl
+python -m rolefetch apple -q -o apple_us.jsonl
 
 # Amazon (uses the site’s search.json endpoint — fast JSON, not HTML)
-python -m career_scraper amazon --loc-query "United States" -v --max-pages 2
+python -m rolefetch amazon --loc-query "United States" -v --max-pages 2
 
 # Full Amazon pull for a location (default out: data/raw/amazon/YYYY-MM-DD/…)
-python -m career_scraper amazon --loc-query "United States" --query "software engineer"
+python -m rolefetch amazon --loc-query "United States" --query "software engineer"
 
 # Google Careers (parses large HTML results pages; use --max-pages while testing)
-python -m career_scraper google --location "United States" -v --max-pages 2
+python -m rolefetch google --location "United States" -v --max-pages 2
 
-python -m career_scraper google --location "United States" --query "engineer"
+python -m rolefetch google --location "United States" --query "engineer"
 ```
 
 ### Output path convention
@@ -67,7 +67,7 @@ Example explicit path (same folder layout):
 run_date="$(date +%F)"
 out_dir="data/raw/apple/${run_date}"
 mkdir -p "${out_dir}"
-python -m career_scraper apple \
+python -m rolefetch apple \
   --location-id united-states-USA \
   --out "${out_dir}/apple_us_all.jsonl"
 ```
@@ -100,7 +100,7 @@ This project does **not** include scraping or automation for [Meta Careers](http
 
 ```bash
 pytest
-ruff check career_scraper tests
+ruff check rolefetch tests
 ```
 
 ### Manual smoke test
@@ -108,7 +108,7 @@ ruff check career_scraper tests
 With network access, run:
 
 ```bash
-python -m career_scraper apple --max-pages 1 --page-delay 0 --timeout 20 -o /tmp/apple_sample.jsonl
+python -m rolefetch apple --max-pages 1 --page-delay 0 --timeout 20 -o /tmp/apple_sample.jsonl
 ```
 
 Confirm the file is non-empty JSONL (`wc -l`, or `python -c "import json; print(json.loads(open('/tmp/apple_sample.jsonl').readline())['title'])"`).

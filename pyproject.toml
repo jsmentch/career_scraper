@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "career-scraper"
+name = "rolefetch"
 version = "0.1.0"
-description = "CLI to fetch job listings from employer career sites (Apple-first, adapter-based)."
+description = "CLI to fetch job listings from employer career sites (adapter-based)."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -20,11 +20,11 @@ dev = [
 ]
 
 [project.scripts]
-career-scraper = "career_scraper.cli:main"
+rolefetch = "rolefetch.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["career_scraper*"]
+include = ["rolefetch*"]
 
 [tool.ruff]
 line-length = 100

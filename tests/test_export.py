@@ -2,8 +2,8 @@ import csv
 import json
 from pathlib import Path
 
-from career_scraper.export import write_csv, write_jsonl
-from career_scraper.models import Job
+from rolefetch.export import write_csv, write_jsonl
+from rolefetch.models import Job
 
 
 def test_write_jsonl_roundtrip(tmp_path: Path) -> None:

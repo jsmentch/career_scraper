@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import IO, Any, Dict, Union
 
-from career_scraper.models import Job
+from rolefetch.models import Job
 
 CSV_COLUMNS = [
     "source",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-from career_scraper.sources.apple import fetch_jobs_for_locations, parse_search_from_hydration_html
+from rolefetch.sources.apple import fetch_jobs_for_locations, parse_search_from_hydration_html
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 

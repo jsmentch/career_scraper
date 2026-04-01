@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from career_scraper import __version__
-from career_scraper.cli import main
+from rolefetch import __version__
+from rolefetch.cli import main
 
 
 def test_version_prints_and_exits_zero(capsys: pytest.CaptureFixture[str]) -> None:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import httpx
 
-from career_scraper.sources.google import (
+from rolefetch.sources.google import (
     GoogleCareersError,
     fetch_jobs,
     normalize_google_row,

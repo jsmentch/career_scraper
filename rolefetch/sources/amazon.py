@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import httpx
 
-from career_scraper.models import Job
+from rolefetch.models import Job
 
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "

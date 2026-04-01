@@ -7,27 +7,27 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
-from career_scraper import __version__
-from career_scraper.export import write_csv, write_jsonl
-from career_scraper.sources.amazon import (
+from rolefetch import __version__
+from rolefetch.export import write_csv, write_jsonl
+from rolefetch.sources.amazon import (
     AmazonAPIError,
     amazon_client,
 )
-from career_scraper.sources.amazon import (
+from rolefetch.sources.amazon import (
     fetch_jobs as amazon_fetch_jobs,
 )
-from career_scraper.sources.apple import (
+from rolefetch.sources.apple import (
     AppleAPIError,
     apple_client,
     fetch_jobs_for_locations,
     fetch_postlocation_matches,
     resolve_location_slug,
 )
-from career_scraper.sources.google import (
+from rolefetch.sources.google import (
     GoogleCareersError,
     google_client,
 )
-from career_scraper.sources.google import (
+from rolefetch.sources.google import (
     fetch_jobs as google_fetch_jobs,
 )
 
@@ -218,7 +218,7 @@ def _cmd_google(args: argparse.Namespace) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="career-scraper",
+        prog="rolefetch",
         description="Download job listings from employer career sites.",
     )
     p.add_argument(

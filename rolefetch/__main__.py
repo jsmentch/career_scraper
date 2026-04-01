@@ -1,4 +1,4 @@
-from career_scraper.cli import main
+from rolefetch.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

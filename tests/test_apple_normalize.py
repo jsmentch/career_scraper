@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from career_scraper.sources.apple import normalize_apple_job
+from rolefetch.sources.apple import normalize_apple_job
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
