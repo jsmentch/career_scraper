@@ -235,6 +235,8 @@ def _cmd_google(args: argparse.Namespace) -> int:
                 page_delay_sec=args.page_delay,
                 max_pages=args.max_pages,
                 include_raw=not args.no_raw,
+                fetch_details=args.fetch_details,
+                detail_delay_sec=args.detail_delay,
                 progress=progress_cb,
             )
         except GoogleCareersError as e:
@@ -557,6 +559,22 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="N",
         help="Stop after N pages (for testing).",
+    )
+    google.add_argument(
+        "--fetch-details",
+        action="store_true",
+        help=(
+            "After listing pages, GET each job posting URL once and parse the main HTML "
+            "description into summary (and raw.jobDescriptionHtml when raw is enabled). "
+            "Uses --page-delay between detail requests unless --detail-delay is set."
+        ),
+    )
+    google.add_argument(
+        "--detail-delay",
+        type=float,
+        default=None,
+        metavar="SEC",
+        help="Delay between job detail page requests (default: same as --page-delay).",
     )
     google.add_argument(
         "--no-raw",

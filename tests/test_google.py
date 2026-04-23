@@ -10,10 +10,29 @@ from rolefetch.sources.google import (
     GoogleCareersError,
     fetch_jobs,
     normalize_google_row,
+    parse_job_detail_description,
     parse_results_page,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+def test_parse_job_detail_description_fixture() -> None:
+    html = (FIXTURES / "google_job_detail_sample.html").read_text(encoding="utf-8")
+    desc = parse_job_detail_description(html)
+    assert desc is not None
+    assert desc.startswith("<h3>Minimum qualifications:")
+    assert "About the job</h3>" in desc
+    assert "Responsibilities</h3>" in desc
+    assert "bE3reb" not in desc
+
+
+def test_parse_job_detail_description_about_only() -> None:
+    html = (FIXTURES / "google_job_detail_about_only.html").read_text(encoding="utf-8")
+    desc = parse_job_detail_description(html)
+    assert desc is not None
+    assert desc.startswith("<h3>About the job</h3>")
+    assert "Only narrative" in desc
 
 
 def test_parse_results_page_fixture() -> None:
@@ -91,6 +110,42 @@ def test_fetch_stops_when_no_new_ids() -> None:
         )
 
     assert len(jobs) == 2
+
+
+def test_fetch_details_loads_job_pages() -> None:
+    listing = (
+        '<a href="jobs/results/9-detail-slug?location=X" '
+        'aria-label="Learn more about Nine"></a>'
+    )
+    detail_html = (FIXTURES / "google_job_detail_sample.html").read_text(encoding="utf-8")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/jobs/results"):
+            return httpx.Response(200, text=listing)
+        if "9-detail-slug" in path:
+            return httpx.Response(200, text=detail_html)
+        return httpx.Response(404, text="not found")
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport) as client:
+        jobs = fetch_jobs(
+            client,
+            location="",
+            query="",
+            page_delay_sec=0,
+            max_pages=1,
+            include_raw=True,
+            fetch_details=True,
+            detail_delay_sec=0,
+        )
+
+    assert len(jobs) == 1
+    assert jobs[0].external_id == "9"
+    assert jobs[0].summary is not None
+    assert "About the job</h3>" in jobs[0].summary
+    assert jobs[0].raw is not None
+    assert "jobDescriptionHtml" in jobs[0].raw
 
 
 def test_http_error_raises() -> None:

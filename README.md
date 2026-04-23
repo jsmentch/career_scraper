@@ -61,6 +61,9 @@ python -m rolefetch google --location "United States" -v --max-pages 2
 
 python -m rolefetch google --location "United States" --query "engineer"
 
+# Google posting HTML (one GET per job after search; use --detail-delay if you hit 429)
+python -m rolefetch google --location "United States" --query "scientist" --fetch-details -v --detail-delay 0.5
+
 # Microsoft (Eightfold pcsx/search JSON — 10 roles per page; use --max-pages while testing)
 python -m rolefetch microsoft --location "United States" -v --max-pages 2
 
@@ -114,6 +117,8 @@ By default each JSONL line includes a `raw` field with the full search payload f
 ### Google note
 
 The CLI downloads `https://www.google.com/about/careers/applications/jobs/results` HTML (the same paginated view the site serves to browsers) and extracts job links from the markup. Pages can be **large** and slow compared with Amazon’s JSON; pagination stops when a page returns **no listings** or **no new job ids**. This is **not a supported public API**, markup may change without notice, and automation may be constrained by [Google’s Terms of Service](https://policies.google.com/terms) and [robots.txt](https://www.google.com/robots.txt). Prefer generous `--timeout`, sensible `--page-delay`, and `--max-pages` while experimenting.
+
+Search pages **do not** include full posting text. Pass **`--fetch-details`** to request each job’s posting URL once and parse the main description block into **`summary`** (HTML fragment: qualifications, about, responsibilities). When raw output is enabled, the same fragment is also stored as **`raw.jobDescriptionHtml`**. Detail requests are easy to rate-limit; use **`--detail-delay`** or rely on the default (same as **`--page-delay`**).
 
 ### Microsoft note
 

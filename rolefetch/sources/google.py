@@ -3,8 +3,9 @@ from __future__ import annotations
 import html as html_lib
 import re
 import time
+from dataclasses import replace
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse, urlunparse
 
 import httpx
 
@@ -19,6 +20,14 @@ GOOGLE_APPLICATIONS_BASE = "https://www.google.com/about/careers/applications/"
 GOOGLE_RESULTS_URL = urljoin(GOOGLE_APPLICATIONS_BASE, "jobs/results")
 
 _MAX_SAFETY_PAGES = 2000
+
+_JOB_DETAIL_SECTION_PREFIXES: Tuple[str, ...] = (
+    "<h3>Minimum qualifications",
+    "<h3>Preferred qualifications",
+    "<h3>About the job</h3>",
+    "<h3>Responsibilities</h3>",
+)
+_JOB_DETAIL_END_MARKER = '<div class="bE3reb">'
 
 _ANCHOR_RE = re.compile(r"<a\s+([^>]+)>", re.IGNORECASE)
 _HREF_RE = re.compile(
@@ -88,6 +97,74 @@ def _absolute_job_url(relative_path: str) -> str:
     return urljoin(GOOGLE_APPLICATIONS_BASE, rel)
 
 
+def _job_detail_url(job: Job) -> str:
+    """Strip query string so the detail request matches the canonical posting URL."""
+    parts = urlparse(job.url)
+    return urlunparse((parts.scheme, parts.netloc, parts.path, parts.params, "", ""))
+
+
+def parse_job_detail_description(html: str) -> Optional[str]:
+    """
+    Extract the main posting HTML (qualifications, about, responsibilities) from a
+    job detail page. Relies on headings and the standard legal footer wrapper; markup
+    may change without notice.
+    """
+    starts: List[int] = []
+    for prefix in _JOB_DETAIL_SECTION_PREFIXES:
+        i = html.find(prefix)
+        if i >= 0:
+            starts.append(i)
+    if not starts:
+        return None
+    start = min(starts)
+    end = html.find(_JOB_DETAIL_END_MARKER, start)
+    if end < 0:
+        return None
+    fragment = html[start:end].strip()
+    return fragment or None
+
+
+def _fetch_job_detail_description_html(client: httpx.Client, job: Job) -> Optional[str]:
+    url = _job_detail_url(job)
+    r = client.get(url, headers=_headers())
+    _raise_google_status(r)
+    return parse_job_detail_description(r.text)
+
+
+def _enrich_jobs_with_job_descriptions(
+    client: httpx.Client,
+    jobs: List[Job],
+    *,
+    include_raw: bool,
+    delay_sec: float,
+    progress: Optional[Callable[[str], None]] = None,
+) -> List[Job]:
+    """One GET per job posting page; sets ``summary`` to extracted HTML fragment."""
+    out: List[Job] = []
+    n = len(jobs)
+    for i, job in enumerate(jobs):
+        if i > 0:
+            time.sleep(delay_sec)
+        jd_html = _fetch_job_detail_description_html(client, job)
+        new_summary = jd_html.strip() if jd_html else None
+
+        if include_raw:
+            merged: Dict[str, Any] = dict(job.raw) if job.raw else {}
+            if new_summary:
+                merged["jobDescriptionHtml"] = new_summary
+            out.append(replace(job, summary=new_summary, raw=merged))
+        else:
+            out.append(replace(job, summary=new_summary))
+
+        if progress is not None:
+            progress(
+                f"Google JDs — {i + 1}/{n} id {job.external_id}"
+                + ("" if new_summary else " (no description block matched)")
+            )
+
+    return out
+
+
 def normalize_google_row(
     external_id: str,
     title: str,
@@ -126,11 +203,17 @@ def fetch_jobs(
     page_delay_sec: float = 0.5,
     max_pages: Optional[int] = None,
     include_raw: bool = True,
+    fetch_details: bool = False,
+    detail_delay_sec: Optional[float] = None,
     progress: Optional[Callable[[str], None]] = None,
 ) -> List[Job]:
     """
     Paginate HTML results (``jobs/results?...&page=``) until a page adds no new job ids,
     returns no listings, or ``max_pages`` is reached.
+
+    When ``fetch_details`` is true, performs one GET per job on the posting URL and
+    parses the main description HTML into ``summary`` (and ``raw.jobDescriptionHtml``
+    when ``include_raw`` is true).
 
     Listing markup is undocumented and may change without notice.
     """
@@ -185,7 +268,18 @@ def fetch_jobs(
         page_num += 1
         time.sleep(page_delay_sec)
 
-    return list(collected.values())
+    jobs = list(collected.values())
+    if fetch_details and jobs:
+        d_delay = detail_delay_sec if detail_delay_sec is not None else page_delay_sec
+        jobs = _enrich_jobs_with_job_descriptions(
+            client,
+            jobs,
+            include_raw=include_raw,
+            delay_sec=float(d_delay),
+            progress=progress,
+        )
+
+    return jobs
 
 
 def google_client(*, timeout: float = 45.0) -> httpx.Client:
